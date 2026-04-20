@@ -33,6 +33,37 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Android related
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+android/app/src/main/res/values/google-services.json
+
+# iOS related
+ios/Flutter/App.framework
+ios/Flutter/App.podspec
+ios/Flutter/App.framework.zip
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Flutter/GeneratedPluginRegistrant.h
+ios/Flutter/GeneratedPluginRegistrant.m
+
+# macOS related
+macos/Flutter/ephemeral/
+macos/Flutter/GeneratedPluginRegistrant.swift
+
+# Linux related
+linux/flutter/ephemeral/
+linux/flutter/generated_plugin_registrant.cc
+linux/flutter/generated_plugin_registrant.h
+linux/flutter/generated_plugins.cmake
+
+# Windows related
+windows/flutter/ephemeral/
+windows/flutter/generated_plugin_registrant.cc
+windows/flutter/generated_plugin_registrant.h
+windows/flutter/generated_plugins.cmake
+
 # Symbolication related
 app.*.symbols
 
