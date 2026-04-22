@@ -21,6 +21,13 @@ class TodoScreen extends StatelessWidget {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               centerTitle: true,
+              actions: [
+                IconButton(
+                  onPressed: state.signOut,
+                  icon: const Icon(Icons.logout),
+                  tooltip: 'Logout',
+                ),
+              ],
               bottom: TabBar(
                 tabs: [
                   Tab(
