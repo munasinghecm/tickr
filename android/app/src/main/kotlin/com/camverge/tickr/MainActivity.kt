@@ -1,4 +1,4 @@
-package com.example.tickr
+package com.camverge.tickr
 
 import io.flutter.embedding.android.FlutterActivity
 
