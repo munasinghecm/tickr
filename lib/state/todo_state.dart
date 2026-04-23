@@ -27,9 +27,10 @@ class TodoState extends ChangeNotifier {
       _subscription?.cancel();
 
       if (user != null) {
-        // Listen to todos in Firestore for the logged-in user
+        // Listen to todos in Firestore for the logged-in user only (Private Tasks)
         _subscription = _firestore
             .collection('todos')
+            .where('userId', isEqualTo: user.uid)
             .orderBy('createdAt', descending: true)
             .snapshots()
             .listen((snapshot) {
@@ -60,11 +61,11 @@ class TodoState extends ChangeNotifier {
   void addItem(String text) {
     if (text.trim().isEmpty) return;
     
-    final id = DateTime.now().millisecondsSinceEpoch.toString();
     final newItem = TodoItem(
-      id: id,
+      id: '', // Firestore will generate the ID
       text: text,
       userId: _currentUser?.uid,
+      createdAt: DateTime.now(),
     );
 
     _firestore.collection('todos').add(newItem.toMap());
@@ -79,9 +80,12 @@ class TodoState extends ChangeNotifier {
   }
 
   void clearDone() async {
+    if (_currentUser == null) return;
+    
     final batch = _firestore.batch();
     final doneSnapshots = await _firestore
         .collection('todos')
+        .where('userId', isEqualTo: _currentUser!.uid)
         .where('isCompleted', isEqualTo: true)
         .get();
         

@@ -1,9 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class TodoItem {
   final String id;
   final String text;
   final bool isCompleted;
-  final String? userId; // Owner of the task
-  final String? circleId; // Group this task belongs to
+  final String? userId;
+  final String? circleId;
+  final DateTime createdAt;
 
   TodoItem({
     required this.id,
@@ -11,6 +14,7 @@ class TodoItem {
     this.isCompleted = false,
     this.userId,
     this.circleId,
+    required this.createdAt,
   });
 
   TodoItem copyWith({
@@ -19,6 +23,7 @@ class TodoItem {
     bool? isCompleted,
     String? userId,
     String? circleId,
+    DateTime? createdAt,
   }) {
     return TodoItem(
       id: id ?? this.id,
@@ -26,6 +31,7 @@ class TodoItem {
       isCompleted: isCompleted ?? this.isCompleted,
       userId: userId ?? this.userId,
       circleId: circleId ?? this.circleId,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 
@@ -35,7 +41,7 @@ class TodoItem {
       'isCompleted': isCompleted,
       'userId': userId,
       'circleId': circleId,
-      'createdAt': id, // Using timestamp ID as a simple createdAt for now
+      'createdAt': Timestamp.fromDate(createdAt),
     };
   }
 
@@ -46,6 +52,7 @@ class TodoItem {
       isCompleted: map['isCompleted'] ?? false,
       userId: map['userId'],
       circleId: map['circleId'],
+      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 }
