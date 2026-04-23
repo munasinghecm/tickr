@@ -1,15 +1,20 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/todo_item.dart';
+import '../models/circle_model.dart';
 
 class TodoState extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   List<TodoItem> _items = [];
-  StreamSubscription? _subscription;
+  List<Circle> _circles = [];
+  Circle? _activeCircle;
+  StreamSubscription? _todoSubscription;
+  StreamSubscription? _circleSubscription;
   User? _currentUser;
 
   TodoState() {
@@ -18,32 +23,97 @@ class TodoState extends ChangeNotifier {
 
   List<TodoItem> get todoItems => _items.where((item) => !item.isCompleted).toList();
   List<TodoItem> get doneItems => _items.where((item) => item.isCompleted).toList();
+  List<Circle> get circles => _circles;
+  Circle? get activeCircle => _activeCircle;
   User? get user => _currentUser;
   bool get isAuthenticated => _currentUser != null;
 
   void _initialize() {
     _auth.authStateChanges().listen((user) {
       _currentUser = user;
-      _subscription?.cancel();
+      _todoSubscription?.cancel();
+      _circleSubscription?.cancel();
 
       if (user != null) {
-        // Listen to todos in Firestore for the logged-in user only (Private Tasks)
-        _subscription = _firestore
-            .collection('todos')
-            .where('userId', isEqualTo: user.uid)
-            .orderBy('createdAt', descending: true)
+        // 1. Listen to Circles where user is a member
+        _circleSubscription = _firestore
+            .collection('circles')
+            .where('members', arrayContains: user.uid)
             .snapshots()
             .listen((snapshot) {
-          _items = snapshot.docs.map((doc) {
-            return TodoItem.fromMap(doc.id, doc.data());
-          }).toList();
+          _circles = snapshot.docs.map((doc) => Circle.fromMap(doc.id, doc.data())).toList();
           notifyListeners();
         });
+
+        // 2. Initial Todo Fetch (Private)
+        switchCircle(null);
       } else {
         _items = [];
+        _circles = [];
+        _activeCircle = null;
         notifyListeners();
       }
     });
+  }
+
+  void switchCircle(Circle? circle) {
+    _activeCircle = circle;
+    _todoSubscription?.cancel();
+
+    Query query = _firestore.collection('todos');
+
+    if (circle == null) {
+      // Private tasks: filter by userId only (no composite index needed)
+      query = query.where('userId', isEqualTo: _currentUser?.uid);
+    } else {
+      // Circle tasks
+      query = query.where('circleId', isEqualTo: circle.id);
+    }
+
+    _todoSubscription = query.snapshots().listen((snapshot) {
+      _items = snapshot.docs
+          .map((doc) => TodoItem.fromMap(doc.id, doc.data() as Map<String, dynamic>))
+          .where((item) => circle == null ? item.circleId == null : true)
+          .toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt)); // Client-side sort
+      notifyListeners();
+    });
+  }
+
+  Future<void> createCircle(String name) async {
+    if (_currentUser == null) return;
+    
+    final inviteCode = _generateInviteCode();
+    await _firestore.collection('circles').add({
+      'name': name,
+      'inviteCode': inviteCode,
+      'adminId': _currentUser!.uid,
+      'members': [_currentUser!.uid],
+    });
+  }
+
+  Future<void> joinCircle(String inviteCode) async {
+    if (_currentUser == null) return;
+
+    final snapshot = await _firestore
+        .collection('circles')
+        .where('inviteCode', isEqualTo: inviteCode.toUpperCase())
+        .limit(1)
+        .get();
+
+    if (snapshot.docs.isNotEmpty) {
+      final docId = snapshot.docs.first.id;
+      await _firestore.collection('circles').doc(docId).update({
+        'members': FieldValue.arrayUnion([_currentUser!.uid]),
+      });
+    } else {
+      throw Exception('Circle not found with that code');
+    }
+  }
+
+  String _generateInviteCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ01234564789';
+    return String.fromCharCodes(Iterable.generate(6, (_) => chars.codeUnitAt(Random().nextInt(chars.length))));
   }
 
   Future<void> signIn(String email, String password) async {
@@ -65,6 +135,7 @@ class TodoState extends ChangeNotifier {
       id: '', // Firestore will generate the ID
       text: text,
       userId: _currentUser?.uid,
+      circleId: _activeCircle?.id,
       createdAt: DateTime.now(),
     );
 
@@ -83,11 +154,15 @@ class TodoState extends ChangeNotifier {
     if (_currentUser == null) return;
     
     final batch = _firestore.batch();
-    final doneSnapshots = await _firestore
-        .collection('todos')
-        .where('userId', isEqualTo: _currentUser!.uid)
-        .where('isCompleted', isEqualTo: true)
-        .get();
+    Query query = _firestore.collection('todos').where('isCompleted', isEqualTo: true);
+
+    if (_activeCircle == null) {
+      query = query.where('userId', isEqualTo: _currentUser!.uid).where('circleId', isNull: true);
+    } else {
+      query = query.where('circleId', isEqualTo: _activeCircle!.id);
+    }
+
+    final doneSnapshots = await query.get();
         
     for (var doc in doneSnapshots.docs) {
       batch.delete(doc.reference);
@@ -97,7 +172,8 @@ class TodoState extends ChangeNotifier {
 
   @override
   void dispose() {
-    _subscription?.cancel();
+    _todoSubscription?.cancel();
+    _circleSubscription?.cancel();
     super.dispose();
   }
 }

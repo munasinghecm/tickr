@@ -27,7 +27,7 @@ class _TodoInputFieldState extends State<TodoInputField> {
       decoration: BoxDecoration(
         color: Theme.of(
           context,
-        ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       child: TextField(
