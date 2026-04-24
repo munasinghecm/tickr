@@ -43,9 +43,12 @@ class _AuthScreenState extends State<AuthScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset(
-                'assets/images/tickr_logo.png',
-                height: 120,
+              Hero(
+                tag: 'app_logo',
+                child: Image.asset(
+                  'assets/images/tickr_logo.png',
+                  height: 120,
+                ),
               ),
               const SizedBox(height: 24),
               Text(
