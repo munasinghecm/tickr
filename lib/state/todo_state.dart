@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../models/todo_item.dart';
 import '../models/circle_model.dart';
 
@@ -21,8 +23,10 @@ class TodoState extends ChangeNotifier {
     _initialize();
   }
 
-  List<TodoItem> get todoItems => _items.where((item) => !item.isCompleted).toList();
-  List<TodoItem> get doneItems => _items.where((item) => item.isCompleted).toList();
+  List<TodoItem> get todoItems =>
+      _items.where((item) => !item.isCompleted).toList();
+  List<TodoItem> get doneItems =>
+      _items.where((item) => item.isCompleted).toList();
   List<Circle> get circles => _circles;
   Circle? get activeCircle => _activeCircle;
   User? get user => _currentUser;
@@ -41,9 +45,11 @@ class TodoState extends ChangeNotifier {
             .where('members', arrayContains: user.uid)
             .snapshots()
             .listen((snapshot) {
-          _circles = snapshot.docs.map((doc) => Circle.fromMap(doc.id, doc.data())).toList();
-          notifyListeners();
-        });
+              _circles = snapshot.docs
+                  .map((doc) => Circle.fromMap(doc.id, doc.data()))
+                  .toList();
+              notifyListeners();
+            });
 
         // 2. Initial Todo Fetch (Private)
         switchCircle(null);
@@ -71,18 +77,26 @@ class TodoState extends ChangeNotifier {
     }
 
     _todoSubscription = query.snapshots().listen((snapshot) {
-      _items = snapshot.docs
-          .map((doc) => TodoItem.fromMap(doc.id, doc.data() as Map<String, dynamic>))
-          .where((item) => circle == null ? item.circleId == null : true)
-          .toList()
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt)); // Client-side sort
+      _items =
+          snapshot.docs
+              .map(
+                (doc) => TodoItem.fromMap(
+                  doc.id,
+                  doc.data() as Map<String, dynamic>,
+                ),
+              )
+              .where((item) => circle == null ? item.circleId == null : true)
+              .toList()
+            ..sort(
+              (a, b) => b.createdAt.compareTo(a.createdAt),
+            ); // Client-side sort
       notifyListeners();
     });
   }
 
   Future<void> createCircle(String name) async {
     if (_currentUser == null) return;
-    
+
     final inviteCode = _generateInviteCode();
     await _firestore.collection('circles').add({
       'name': name,
@@ -113,15 +127,43 @@ class TodoState extends ChangeNotifier {
 
   String _generateInviteCode() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ01234564789';
-    return String.fromCharCodes(Iterable.generate(6, (_) => chars.codeUnitAt(Random().nextInt(chars.length))));
+    return String.fromCharCodes(
+      Iterable.generate(
+        6,
+        (_) => chars.codeUnitAt(Random().nextInt(chars.length)),
+      ),
+    );
   }
 
   Future<void> signIn(String email, String password) async {
     await _auth.signInWithEmailAndPassword(email: email, password: password);
   }
 
+  Future<void> signInWithGoogle() async {
+    final GoogleSignIn googleSignIn = GoogleSignIn(
+      clientId: kIsWeb
+          ? '572991678414-s7h0am0nn8tadkqiaq71aiav33j0ehh3.apps.googleusercontent.com'
+          : null,
+      scopes: ['email', 'profile'],
+    );
+    final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
+    if (googleUser != null) {
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      await _auth.signInWithCredential(credential);
+    }
+  }
+
   Future<void> signUp(String email, String password) async {
-    await _auth.createUserWithEmailAndPassword(email: email, password: password);
+    await _auth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
   }
 
   Future<void> signOut() async {
@@ -130,7 +172,7 @@ class TodoState extends ChangeNotifier {
 
   void addItem(String text) {
     if (text.trim().isEmpty) return;
-    
+
     final newItem = TodoItem(
       id: '', // Firestore will generate the ID
       text: text,
@@ -152,18 +194,22 @@ class TodoState extends ChangeNotifier {
 
   void clearDone() async {
     if (_currentUser == null) return;
-    
+
     final batch = _firestore.batch();
-    Query query = _firestore.collection('todos').where('isCompleted', isEqualTo: true);
+    Query query = _firestore
+        .collection('todos')
+        .where('isCompleted', isEqualTo: true);
 
     if (_activeCircle == null) {
-      query = query.where('userId', isEqualTo: _currentUser!.uid).where('circleId', isNull: true);
+      query = query
+          .where('userId', isEqualTo: _currentUser!.uid)
+          .where('circleId', isNull: true);
     } else {
       query = query.where('circleId', isEqualTo: _activeCircle!.id);
     }
 
     final doneSnapshots = await query.get();
-        
+
     for (var doc in doneSnapshots.docs) {
       batch.delete(doc.reference);
     }
