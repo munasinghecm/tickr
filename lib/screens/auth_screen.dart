@@ -43,7 +43,10 @@ class _AuthScreenState extends State<AuthScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.check_circle_outline, size: 80, color: Colors.teal),
+              Image.asset(
+                'assets/images/tickr_logo.png',
+                height: 120,
+              ),
               const SizedBox(height: 24),
               Text(
                 _isLogin ? 'Welcome Back' : 'Create Account',

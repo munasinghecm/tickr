@@ -132,6 +132,18 @@ class CircleDrawer extends StatelessWidget {
               Navigator.pop(context);
             },
           ),
+          const Spacer(),
+          const Divider(),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Opacity(
+              opacity: 0.4,
+              child: Image.asset(
+                'assets/images/tickr_logo.png',
+                height: 40,
+              ),
+            ),
+          ),
         ],
       ),
     );
