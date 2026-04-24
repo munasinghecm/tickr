@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../state/todo_state.dart';
 import '../widgets/todo_widgets.dart';
+import '../widgets/circle_drawer.dart';
 
 class TodoScreen extends StatelessWidget {
   final TodoState state;
@@ -15,12 +16,20 @@ class TodoScreen extends StatelessWidget {
         return DefaultTabController(
           length: 2,
           child: Scaffold(
+            drawer: CircleDrawer(state: state),
             appBar: AppBar(
-              title: const Text(
-                'Tickr',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              title: Text(
+                state.activeCircle?.name ?? 'Tickr',
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               centerTitle: true,
+              actions: [
+                IconButton(
+                  onPressed: state.signOut,
+                  icon: const Icon(Icons.logout),
+                  tooltip: 'Logout',
+                ),
+              ],
               bottom: TabBar(
                 tabs: [
                   Tab(

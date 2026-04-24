@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "572991678414",
+    "project_id": "tickr-eaeca",
+    "storage_bucket": "tickr-eaeca.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:572991678414:android:fa636d9d3656448733ed9f",
+        "android_client_info": {
+          "package_name": "com.camverge.tickr"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCz_bK0zwl9roTRpi0GwFYsNR1psXZ_4oo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

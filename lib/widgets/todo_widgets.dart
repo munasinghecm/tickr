@@ -25,7 +25,9 @@ class _TodoInputFieldState extends State<TodoInputField> {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       child: TextField(
@@ -85,7 +87,13 @@ class TodoItemTile extends StatelessWidget {
           children: [
             Icon(dismissIcon, color: Colors.white),
             const SizedBox(width: 8),
-            Text(dismissLabel, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            Text(
+              dismissLabel,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
       ),
@@ -102,18 +110,20 @@ class TodoItemTile extends StatelessWidget {
             item.text,
             style: TextStyle(
               decoration: item.isCompleted ? TextDecoration.lineThrough : null,
-              color: item.isCompleted ? Theme.of(context).colorScheme.outline : null,
+              color: item.isCompleted
+                  ? Theme.of(context).colorScheme.outline
+                  : null,
             ),
           ),
           leading: CircleAvatar(
-            backgroundColor: item.isCompleted 
-              ? Theme.of(context).colorScheme.primaryContainer 
-              : Theme.of(context).colorScheme.secondaryContainer,
+            backgroundColor: item.isCompleted
+                ? Theme.of(context).colorScheme.primaryContainer
+                : Theme.of(context).colorScheme.secondaryContainer,
             child: Icon(
               item.isCompleted ? Icons.check : Icons.radio_button_unchecked,
-              color: item.isCompleted 
-                ? Theme.of(context).colorScheme.onPrimaryContainer 
-                : Theme.of(context).colorScheme.onSecondaryContainer,
+              color: item.isCompleted
+                  ? Theme.of(context).colorScheme.onPrimaryContainer
+                  : Theme.of(context).colorScheme.onSecondaryContainer,
             ),
           ),
         ),
