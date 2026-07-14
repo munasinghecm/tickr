@@ -1,4 +1,6 @@
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/encryption_service.dart';
 
 class TodoItem {
   final String id;
@@ -45,10 +47,46 @@ class TodoItem {
     };
   }
 
+  Map<String, dynamic> toMapEncrypted(Uint8List? encryptionKey) {
+    String finalTodoText = text;
+    final shouldEncrypt = encryptionKey != null && circleId == null;
+
+    if (shouldEncrypt) {
+      finalTodoText = EncryptionService.encryptText(text, encryptionKey);
+    }
+
+    return {
+      'text': finalTodoText,
+      'isCompleted': isCompleted,
+      'userId': userId,
+      'circleId': circleId,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'isEncrypted': shouldEncrypt,
+    };
+  }
+
   factory TodoItem.fromMap(String id, Map<String, dynamic> map) {
     return TodoItem(
       id: id,
       text: map['text'] ?? '',
+      isCompleted: map['isCompleted'] ?? false,
+      userId: map['userId'],
+      circleId: map['circleId'],
+      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+
+  factory TodoItem.fromMapDecrypted(String id, Map<String, dynamic> map, Uint8List? encryptionKey) {
+    String rawText = map['text'] ?? '';
+    final isEncrypted = map['isEncrypted'] ?? false;
+
+    if (isEncrypted && encryptionKey != null) {
+      rawText = EncryptionService.decryptText(rawText, encryptionKey);
+    }
+
+    return TodoItem(
+      id: id,
+      text: rawText,
       isCompleted: map['isCompleted'] ?? false,
       userId: map['userId'],
       circleId: map['circleId'],

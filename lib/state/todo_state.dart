@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -7,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../models/todo_item.dart';
 import '../models/circle_model.dart';
+import '../services/encryption_service.dart';
 
 class TodoState extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -18,6 +20,9 @@ class TodoState extends ChangeNotifier {
   StreamSubscription? _todoSubscription;
   StreamSubscription? _circleSubscription;
   User? _currentUser;
+
+  Uint8List? _encryptionKey;
+  bool _needsPassphrase = false;
 
   TodoState() {
     _initialize();
@@ -31,14 +36,28 @@ class TodoState extends ChangeNotifier {
   Circle? get activeCircle => _activeCircle;
   User? get user => _currentUser;
   bool get isAuthenticated => _currentUser != null;
+  
+  bool get needsPassphrase => _needsPassphrase;
+  Uint8List? get encryptionKey => _encryptionKey;
 
   void _initialize() {
-    _auth.authStateChanges().listen((user) {
+    _auth.authStateChanges().listen((user) async {
       _currentUser = user;
       _todoSubscription?.cancel();
       _circleSubscription?.cancel();
+      _encryptionKey = null;
+      _needsPassphrase = false;
 
       if (user != null) {
+        // Check for existing encryption key in secure storage
+        final savedKey = await EncryptionService.getKey(user.uid);
+        if (savedKey != null) {
+          _encryptionKey = savedKey;
+          _needsPassphrase = false;
+        } else {
+          _needsPassphrase = true;
+        }
+
         // 1. Listen to Circles where user is a member
         _circleSubscription = _firestore
             .collection('circles')
@@ -62,6 +81,21 @@ class TodoState extends ChangeNotifier {
     });
   }
 
+  Future<void> initializeKeyWithPassphrase(String passphrase) async {
+    if (_currentUser == null) return;
+    
+    // Derive key using passphrase and the user's unique UID as salt
+    final key = EncryptionService.deriveKey(passphrase, _currentUser!.uid);
+    await EncryptionService.saveKey(_currentUser!.uid, key);
+    
+    _encryptionKey = key;
+    _needsPassphrase = false;
+    notifyListeners();
+    
+    // Refresh subscription to decrypt items
+    switchCircle(_activeCircle);
+  }
+
   void switchCircle(Circle? circle) {
     _activeCircle = circle;
     _todoSubscription?.cancel();
@@ -69,10 +103,8 @@ class TodoState extends ChangeNotifier {
     Query query = _firestore.collection('todos');
 
     if (circle == null) {
-      // Private tasks: filter by userId only (no composite index needed)
       query = query.where('userId', isEqualTo: _currentUser?.uid);
     } else {
-      // Circle tasks
       query = query.where('circleId', isEqualTo: circle.id);
     }
 
@@ -80,16 +112,17 @@ class TodoState extends ChangeNotifier {
       _items =
           snapshot.docs
               .map(
-                (doc) => TodoItem.fromMap(
+                (doc) => TodoItem.fromMapDecrypted(
                   doc.id,
                   doc.data() as Map<String, dynamic>,
+                  _encryptionKey,
                 ),
               )
               .where((item) => circle == null ? item.circleId == null : true)
               .toList()
             ..sort(
               (a, b) => b.createdAt.compareTo(a.createdAt),
-            ); // Client-side sort
+            );
       notifyListeners();
     });
   }
@@ -167,6 +200,9 @@ class TodoState extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
+    if (_currentUser != null) {
+      await EncryptionService.clearKey(_currentUser!.uid);
+    }
     await _auth.signOut();
   }
 
@@ -174,14 +210,14 @@ class TodoState extends ChangeNotifier {
     if (text.trim().isEmpty) return;
 
     final newItem = TodoItem(
-      id: '', // Firestore will generate the ID
+      id: '',
       text: text,
       userId: _currentUser?.uid,
       circleId: _activeCircle?.id,
       createdAt: DateTime.now(),
     );
 
-    _firestore.collection('todos').add(newItem.toMap());
+    _firestore.collection('todos').add(newItem.toMapEncrypted(_encryptionKey));
   }
 
   void completeItem(String id) {

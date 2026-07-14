@@ -41,6 +41,11 @@ dependencies:
   cloud_firestore: ^5.6.2
   google_sign_in: ^6.2.1
 
+  # Cryptography and Secure Storage
+  encrypt: ^5.0.3
+  flutter_secure_storage: ^9.0.0
+  pointycastle: ^3.7.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
