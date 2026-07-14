@@ -43,7 +43,13 @@ class _AuthScreenState extends State<AuthScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.check_circle_outline, size: 80, color: Colors.teal),
+              Hero(
+                tag: 'app_logo',
+                child: Image.asset(
+                  'assets/images/tickr_logo.png',
+                  height: 120,
+                ),
+              ),
               const SizedBox(height: 24),
               Text(
                 _isLogin ? 'Welcome Back' : 'Create Account',
@@ -84,6 +90,49 @@ class _AuthScreenState extends State<AuthScreen> {
                       ),
                       child: Text(_isLogin ? 'Login' : 'Sign Up'),
                     ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(child: Divider(color: Colors.grey.shade300)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text('OR', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                  ),
+                  Expanded(child: Divider(color: Colors.grey.shade300)),
+                ],
+              ),
+              const SizedBox(height: 24),
+              OutlinedButton.icon(
+                onPressed: _isLoading ? null : () async {
+                  setState(() => _isLoading = true);
+                  try {
+                    await widget.state.signInWithGoogle();
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+                      );
+                    }
+                  } finally {
+                    if (mounted) setState(() => _isLoading = false);
+                  }
+                },
+                icon: Image.asset(
+                  'assets/images/google_logo.png',
+                  height: 24,
+                  width: 24,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(Icons.account_circle, color: Colors.grey, size: 24);
+                  },
+                ),
+                label: const Text('Continue with Google'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                  side: BorderSide(color: Colors.grey.shade300),
+                  foregroundColor: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 16),
               TextButton(
                 onPressed: () => setState(() => _isLogin = !_isLogin),
                 child: Text(_isLogin

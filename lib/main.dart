@@ -4,6 +4,7 @@ import 'firebase_options.dart';
 import 'state/todo_state.dart';
 import 'screens/auth_screen.dart';
 import 'screens/todo_screen.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,9 +47,7 @@ class _TickrAppState extends State<TickrApp> {
             ),
           ),
           themeMode: ThemeMode.system,
-          home: _todoState.isAuthenticated
-              ? TodoScreen(state: _todoState)
-              : AuthScreen(state: _todoState),
+          home: SplashScreen(state: _todoState),
         );
       },
     );
